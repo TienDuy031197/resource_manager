@@ -5,7 +5,25 @@ const DemoData = {
     department: [
         {
             id: 1,
+            nameDepartment: "All"
+        },
+        {
+            id: 2,
             nameDepartment: "Phòng ban 1"
+        },
+        {
+            id: 3,
+            nameDepartment: "Phòng ban 2"
+        },
+        {
+            id: 4,
+            nameDepartment: "Phòng ban 3"
+        }
+    ],
+    department1: [
+        {
+            lable: "nameDepartment",
+            value: "Phòng ban 1"
         },
         {
             id: 2,
@@ -19,14 +37,18 @@ const DemoData = {
     jobtitle: [
         {
             id: 1,
-            nameJob: "Job 1"
+            nameJob: "All"
         },
         {
             id: 2,
-            nameJob: "Job 2"
+            nameJob: "Job 1"
         },
         {
             id: 3,
+            nameJob: "Job 2"
+        },
+        {
+            id: 4,
             nameJob: "Job 3"
         }
     ],

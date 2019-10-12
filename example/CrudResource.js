@@ -13,11 +13,47 @@ import { Modal, Spin, Empty, Pagination } from "antd";
 import { DemoData } from '../src/index';
 import MultiSelectReact from 'multi-select-react';
 import './Basiccss.css';
-import { Layout, Menu, Icon, Input, Avatar } from 'antd';
-import { Link } from 'react-router-dom'
+import { Layout, Menu, Icon, Input, Avatar, Table, Divider, Select } from 'antd';
+import Async, { makeAsyncSelect } from 'react-select/async';
+import AsyncSelect from 'react-select/async';
+import { Link } from 'react-router-dom';
+
+const { Column, ColumnGroup } = Table;
+
+const data = [
+  {
+    key: '1',
+    firstName: '1',
+    lastName: 'Nguyen Tien Duy',
+    age: 32,
+    address: 'New York No. 1 Lake Park',
+    tags: ['nice', 'developer'],
+  },
+  {
+    key: '2',
+    firstName: 'Jim',
+    lastName: 'Green',
+    age: 42,
+    address: 'London No. 1 Lake Park',
+    tags: ['loser'],
+  },
+  {
+    key: '3',
+    firstName: 'Joe',
+    lastName: 'Black',
+    age: 32,
+    address: 'Sidney No. 1 Lake Park',
+    tags: ['cool', 'teacher'],
+  },
+];
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Search } = Input;
+
+const children = [];
+for (let i = 10; i < 36; i++) {
+  children.push(<Option key={i.toString(36) + i}>{i.toString(36) + i}</Option>);
+}
 
 class CrudResource extends Component {
   constructor(props) {
@@ -55,14 +91,23 @@ class CrudResource extends Component {
 
       totalElement: 0,
       pageIndex: 1,
-      pageSize: 5,
+      pageSize: 10,
       checkEditMulti: false,
 
       nameSearch: '',
       emailSearch: '',
       departmentSearch: '',
       jobSearch: '',
-      skillSearch: '',
+      skillSearch: [],
+
+      inputValue: '',
+      value: 'ocean',
+
+      nameError: '',
+      emailError: '',
+      departmentError: '',
+      jobError: '',
+      skillError: '',
     }
   }
 
@@ -88,17 +133,24 @@ class CrudResource extends Component {
     console.log("toi day");
     axios({
       method: 'GET',
-      url: 'https://demo-app-tool-nodejs.herokuapp.com/api/resource?pageIndex=' + newe + '&pageSize=' + pageSize,
+      url: 'https://rmgit.topicanative.edu.vn/api/resource?pageIndex=' + newe + '&pageSize=' + pageSize,
       data: {
         // "pageIndex": 1,
         // "pageSize": 2
       }
     }).then(res => {
-      console.log("Resaaaa", res);
+      if (res.data.resource.length > 0) {
+        for (let i = 0; i < res.data.resource.length; i++) {
+          let j = res.data.resource[i].skill.toString();
+          res.data.resource[i].skill = j;
+        }
+        console.log("Resaaaa", res.data.resource);
+      }
+
       this.setState({
         showList: res.data.resource,
         totalElement: res.data.myPage.totalElements,
-      }, this.displayData);
+      },this.displayData);
 
     }).catch(err => {
       console.log(err);
@@ -123,6 +175,7 @@ class CrudResource extends Component {
         arrayJob.push(DemoData.jobtitle[i].nameJob);
       }
     }
+
     this.setState({
       arrayJobTile: arrayJob
     })
@@ -146,7 +199,7 @@ class CrudResource extends Component {
     console.log("id", obj._id);
     axios({
       method: 'DELETE',
-      url: 'https://demo-app-tool-nodejs.herokuapp.com/api/resource/' + obj._id,
+      url: 'https://rmgit.topicanative.edu.vn/api/resource/' + obj._id,
       data: {
 
       }
@@ -172,26 +225,28 @@ class CrudResource extends Component {
   handleEdit = (obj) => {
     let { multiSelect } = this.state;
     console.log("skill edit", multiSelect);
-    const string = obj.skill;
-    if (obj.skill.length == 1) {
+    console.log("zzzz", obj);
+    let stringg = obj.skill.split(',');
+    console.log("ojoj", stringg);
+    if (stringg.length == 1) {
       this.setState({
-        editSkillMaster: obj.skill[0],
+        editSkillMaster: stringg[0],
         editSkill: '',
       })
-    } else if (obj.skill.length > 1) {
+    } else if (stringg.length > 1) {
       let tmpSkill = '';
-      obj.skill.forEach((item) => {
+      stringg.forEach((item) => {
         tmpSkill = tmpSkill + ',' + item;
       })
       for (let i = 0; i < multiSelect.length; i++) {
-        for (let j = 1; j < obj.skill.length; j++) {
-          if (multiSelect[i].label === obj.skill[j]) {
+        for (let j = 1; j < stringg.length; j++) {
+          if (multiSelect[i].label === stringg[j]) {
             multiSelect[i].value = true;
           }
         }
       }
       this.setState({
-        editSkillMaster: obj.skill[0],
+        editSkillMaster: stringg[0],
         editSkill: tmpSkill.slice(1),
         multiSelect: multiSelect,
       })
@@ -210,7 +265,8 @@ class CrudResource extends Component {
       showModalEdit: true,
     });
 
-    console.log("item", this.state.multiSelect);
+    console.log("skill master", stringg[0]);
+
 
   }
 
@@ -283,7 +339,7 @@ class CrudResource extends Component {
 
     axios({
       method: 'PUT',
-      url: 'https://demo-app-tool-nodejs.herokuapp.com/api/resource/' + idEdit,
+      url: 'https://rmgit.topicanative.edu.vn/api/resource/' + idEdit,
       data: {
         "resourceName": editName,
         "email": editEmail,
@@ -335,46 +391,110 @@ class CrudResource extends Component {
   openModal = () => {
     this.setState({
       showModal: true,
+      fullname: '',
+      email: '',
+      department: '',
+      job_title: '',
+      skill: '',
+      notes: '',
+      nameSkill: '',
+      skillMaster: '',
     })
+  }
+
+  validateEmail = (email) => {
+    var result = false;
+    var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    if (re.test(String(email).toLowerCase())) {
+      if (email.slice(-13, email.length) === "topica.edu.vn") {
+        result = true;
+      }
+    }
+    return result;
+  }
+
+  validate = () => {
+    let nameError = '';
+    let emailError = '';
+    let departmentError = '';
+    let jobError = '';
+    let skillError = '';
+
+    if (!this.state.fullname) {
+      nameError = "Name cannot be blank!";
+    }
+
+    if (!this.state.email) {
+      emailError = "Email cannot be blank!";
+    } else if (!this.validateEmail(this.state.email)) {
+      emailError = "Invalid email examplle@topica.edu.vn!";
+    }
+
+    if (!this.state.job_title) {
+      jobError = "Job cannot be blank!";
+    }
+
+    if (!this.state.skillMaster) {
+      skillError = "Skill master cannot be blank!";
+    }
+
+    if (nameError || emailError || jobError || skillError) {
+      this.setState({ nameError, emailError, departmentError, jobError, skillError });
+      return false;
+    }
+
+    return true;
+
   }
 
   handleOk = () => {
     let { showList, fullname, email, department, job_title, skill, notes, nameSkill, skillMaster } = this.state;
-    let arraySkillPost = [];
-    arraySkillPost.push(skillMaster);
-    let arraySkill_ = nameSkill.split(',');
-    arraySkill_.forEach((item) => {
-      arraySkillPost.push(item);
-    })
-
-    this.setState({
-      skill: skillMaster + ',' + nameSkill,
-    })
-    console.log("skill", skillMaster + ',' + nameSkill);
-    axios({
-      method: 'POST',
-      url: 'https://demo-app-tool-nodejs.herokuapp.com/api/resource/create',
-      data: {
-        "resourceName": fullname,
-        "email": email,
-        "department": department,
-        "jobTitle": job_title,
-        "skill": arraySkillPost,
-        "notes": notes
-      }
-    }).then(res => {
-      console.log(res);
-      let addList = { resourceName: fullname, email: email, department: department, jobTitle: job_title, skill: skillMaster + ',' + nameSkill, notes: notes };
-      showList.push(addList);
+    const isValid = this.validate();
+    if (isValid) {
       this.setState({
-        showList: showList,
-        showModal: false,
-        checkEditMulti: false,
+        loading: true,
+      })
+      let arraySkillPost = [];
+      arraySkillPost.push(skillMaster);
+      nameSkill.forEach((item) => {
+        arraySkillPost.push(item);
+      })
+
+      this.setState({
+        skill: skillMaster + ',' + nameSkill,
+      })
+      console.log("skill", skillMaster + ',' + nameSkill);
+      axios({
+        method: 'POST',
+        url: 'https://rmgit.topicanative.edu.vn/api/resource/create',
+        data: {
+          "resourceName": fullname,
+          "email": email,
+          "department": department,
+          "jobTitle": job_title,
+          "skill": arraySkillPost,
+          "notes": notes
+        }
+      }).then(res => {
+        console.log(res);
+        let addList = { resourceName: fullname, email: email, department: department, jobTitle: job_title, skill: skillMaster + ',' + nameSkill, notes: notes };
+        showList.push(addList);
+        this.setState({
+          showModal: false,
+          checkEditMulti: false,
+          fullname: '',
+          email: '',
+          department: '',
+          job_title: '',
+          skillMaster: '',
+          nameSkill: '',
+          notes: '',
+        }, this.loadData);
+      }).catch(err => {
+        console.log(err);
       });
-      alert("Them thanh cong!");
-    }).catch(err => {
-      console.log(err);
-    });
+    }
+
   }
 
   handleCancel = () => {
@@ -387,6 +507,11 @@ class CrudResource extends Component {
       nameSkill: '',
       notes: '',
       skillMaster: '',
+      nameError: '',
+      emailError: '',
+      departmentError: '',
+      jobError: '',
+      skillError: '',
     })
   }
 
@@ -400,6 +525,12 @@ class CrudResource extends Component {
     });
 
     console.log("kill", this.state.skill)
+  }
+
+  onChanMultiSkill = (value) => {
+    this.setState({
+      nameSkill: value,
+    })
   }
 
   onChangeEdit = (e) => {
@@ -504,6 +635,12 @@ class CrudResource extends Component {
 
   getFilter = () => {
     let { nameSearch, emailSearch, departmentSearch, jobSearch, skillSearch } = this.state;
+    if (departmentSearch === "All") {
+      departmentSearch = '';
+    }
+    if (jobSearch === "All") {
+      jobSearch = '';
+    }
     let arrayt = [];
     if (nameSearch != '') {
       arrayt.push({ "value": nameSearch, "title": "resourceName" });
@@ -517,11 +654,11 @@ class CrudResource extends Component {
     if (jobSearch != '') {
       arrayt.push({ "value": jobSearch, "title": "jobTitle" });
     }
-    if (skillSearch != '') {
+    if (skillSearch.length != 0) {
       arrayt.push({ "value": skillSearch, "title": "skill" })
     }
 
-    let url = 'https://demo-app-tool-nodejs.herokuapp.com/api/resource?';
+    let url = 'https://rmgit.topicanative.edu.vn/api/resource?';
     for (let i = 0; i < arrayt.length; i++) {
       url = url + arrayt[i].title + '=' + arrayt[i].value + '&';
     }
@@ -535,8 +672,17 @@ class CrudResource extends Component {
       }
     }).then(res => {
       console.log("ket qua", res);
+      if (res.data.resource.length > 0) {
+        for (let i = 0; i < res.data.resource.length; i++) {
+          let j = res.data.resource[i].skill.toString();
+          res.data.resource[i].skill = j;
+        }
+        console.log("Resaaaa", res.data.resource);
+      }
+      console.log("test total", res.data.myPage.totalElements)
       this.setState({
         showList: res.data.resource,
+        totalElement: res.data.myPage.totalElements,
       }, this.displayData);
 
     }).catch(err => {
@@ -552,6 +698,67 @@ class CrudResource extends Component {
       [name]: value,
       loading: true,
     }, this.getFilter)
+  }
+
+  showEditDepartment = (value) => {
+    console.log("sssyysys", value);
+  }
+
+  //department
+  showSelectDep = () => {
+    let { arrayDepartment } = this.state;
+    Object.assign({}, arrayDepartment);
+    return arrayDepartment.map((value, index) => {
+      switch (index) {
+        case index:
+          return <Option key={index} value={value}>{value}</Option>
+      }
+    })
+  }
+
+  onChangeSearchDepartment = (e) => {
+    console.log("department", e);
+    this.setState({
+      departmentSearch: e,
+      loading: true,
+    }, this.getFilter);
+  }
+  //search job
+  showSelectJob = () => {
+    let { arrayJobTile } = this.state;
+    Object.assign({}, arrayJobTile);
+    return arrayJobTile.map((value, index) => {
+      switch (index) {
+        case index:
+          return <Option key={index} value={value}>{value}</Option>
+      }
+    })
+  }
+
+  onChangeSearchJob = (e) => {
+    this.setState({
+      jobSearch: e,
+      loading: true,
+    }, this.getFilter);
+  }
+  // search skill
+  handleChangeSearchSkill = (value) => {
+    this.setState({
+      skillSearch: value,
+      loading: true,
+    }, this.getFilter);
+  }
+
+  //search skill
+  showSelectEditSkill = () => {
+    let { arraySkill } = this.state;
+    Object.assign({}, arraySkill);
+    return arraySkill.map((value, index) => {
+      switch (index) {
+        case index:
+          return <Option key={index} value={value}>{value}</Option>
+      }
+    })
   }
 
   render() {
@@ -570,94 +777,113 @@ class CrudResource extends Component {
       <div>
         {/* <NavCustom /> */}
         <div className="container">
-          <div className="table-wrapper">
-            <div className="table-title">
-              <div className="row">
-                <div className="col-sm-8"></div>
-                <div className="col-sm-4">
-                  <button type="button" onClick={this.openModal} className="btn btn-info add-new"><i className="fa fa-plus"></i> Add New</button>
-                </div>
-              </div>
-              <div className="row">
-                <div className="col-sm-2">
-                  <Search
-                    placeholder="search name"
-                    onSearch={value => console.log("dydydy", value)}
-                    name="nameSearch"
-                    value={nameSearch}
-                    onChange={this.loadApi}
-                    style={{ width: 150 }}
-                  />
-                </div>
-                <div className="col-sm-2">
-                  <Search
-                    placeholder="search email"
-                    onSearch={value => console.log(value)}
-                    style={{ width: 150 }}
-                    name="emailSearch"
-                    value={emailSearch}
-                    onChange={this.loadApi}
-                  />
-                </div>
-                <div className="col-sm-2">
-                  <Search
-                    placeholder="search department"
-                    onSearch={value => console.log(value)}
-                    style={{ width: 150 }}
-                    name="departmentSearch"
-                    value={departmentSearch}
-                    onChange={this.loadApi}
-                  />
-                </div>
-                <div className="col-sm-2">
-                  <Search
-                    placeholder="search job"
-                    onSearch={value => console.log(value)}
-                    style={{ width: 150 }}
-                    name="jobSearch"
-                    value={jobSearch}
-                    onChange={this.loadApi}
-                  />
-                </div>
-                <div className="col-sm-2">
-                  <Search
-                    placeholder="search skill"
-                    onSearch={value => console.log(value)}
-                    style={{ width: 150 }}
-                    name="skillSearch"
-                    value={skillSearch}
-                    onChange={this.loadApi}
-                  />
-                </div>
-              </div>
+          <div className="row">
+            <div className="col-xs-2 col-sm-2 col-md-2 col-lg-2" style={{ marginBottom: "10px" }}>
+              <button type="button" onClick={this.openModal} className="ant-btn ant-btn-danger" style={{ backgroundColor: "#cc3e31", color: "white" }}><span>Thêm mới</span></button>
             </div>
-            <Spin spinning={this.state.loading}>
-              <table className="table table-bordered">
-                <thead>
-                  <tr>
-                    <th>Full Name</th>
-                    <th>Email</th>
-                    <th>Department</th>
-                    <th>Job Title</th>
-                    <th>Skill</th>
-                    <th>Notes</th>
-                    <th>action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {this.rederItem()}
-                </tbody>
-              </table>
+            <div className="col-xs-2 col-sm-2 col-md-2 col-lg-2" style={{ marginBottom: "10px" }}>
+              <Search
+                placeholder="search name"
+                onSearch={value => console.log("dydydy", value)}
+                name="nameSearch"
+                value={nameSearch}
+                onChange={this.loadApi}
+                style={{ width: 150 }}
+              />
+            </div>
+            <div className="col-xs-2 col-sm-2 col-md-2 col-lg-2" style={{ marginBottom: "10px" }}>
+              <Search
+                placeholder="search email"
+                onSearch={value => console.log(value)}
+                style={{ width: 150 }}
+                name="emailSearch"
+                value={emailSearch}
+                onChange={this.loadApi}
+              />
+            </div>
+            <div className="col-xs-2 col-sm-2 col-md-2 col-lg-2" style={{ marginBottom: "10px" }}>
+              <Select
+                showSearch
+                style={{ width: 150 }}
+                placeholder="search department"
+                optionFilterProp="children"
+                onChange={this.onChangeSearchDepartment}
+                onFocus={this.onFocus}
+                onBlur={this.onBlur}
+                onSearch={value => console.log("search project", value)}
+                filterOption={(input, option) =>
+                  option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                }
+              >
+                {this.showSelectDep()}
+              </Select>
+            </div>
+            <div className="col-xs-2 col-sm-2 col-md-2 col-lg-2" style={{ marginBottom: "10px" }}>
+              <Select
+                showSearch
+                style={{ width: 150 }}
+                placeholder="search Job"
+                optionFilterProp="children"
+                onChange={this.onChangeSearchJob}
+                onFocus={this.onFocus}
+                onBlur={this.onBlur}
+                onSearch={value => console.log("search project", value)}
+                filterOption={(input, option) =>
+                  option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                }
+              >
+                {this.showSelectJob()}
+              </Select>
+            </div>
+            <div className="col-xs-2 col-sm-2 col-md-2 col-lg-2" style={{ marginBottom: "10px" }}>
+              <Select
+                mode="multiple"
+                style={{ width: '100%' }}
+                placeholder="Search skill"
+                // defaultValue={['a10', 'c12']}
+                onChange={this.handleChangeSearchSkill}
+              >
+                {this.showSelectEditSkill()}
+              </Select>
+            </div>
+          </div>
+          <div className="row">
+            <div className="col-xs-12 col-sm-12 col-md-12 col-lg-12" style={{ margin: "auto" }}>
+              <Spin spinning={this.state.loading}>
+                <Table dataSource={this.state.showList} style={{ border: '1px solid #c6d2e4' }} pagination={false}>
+                  {/* <ColumnGroup title="Name"> */}
+                  <Column title="Full Name" dataIndex="resourceName" key="resourceName" />
+                  <Column title="Email" dataIndex="email" key="email" />
+                  <Column title="Department" dataIndex="department" key="department" />
+                  <Column title="Job Title" dataIndex="jobTitle" key="jobTitle" />
+                  <Column title="Skill" dataIndex="skill" key="skill" />
+                  <Column title="Notes" dataIndex="notes" key="notes" />
+                  <Column
+                    title="Action"
+                    key="action"
+                    render={(text, record) => (
+                      <span>
+                        <a onClick={() => this.handleEdit(record)}><Icon type="edit" /></a>
+                        <Divider type="vertical" />
+                        <a onClick={this.showDeleteDepartment}><Icon type="delete" /></a>
+                      </span>
+                    )}
+                  />
+                </Table>
+              </Spin>
+            </div>
+          </div>
+          <div className="row">
+            <div className="col-xs-12 col-sm-12 col-md-12 col-lg-12" style={{ margin: "auto" }}>
               <Pagination
                 style={{ margin: "auto", textAlign: "center", marginTop: "10px", }}
                 onChange={this.onChangePagination}
                 defaultCurrent={1}
                 current={pageIndex}
-                pageSize={5}
+                pageSize={this.state.pageSize}
                 total={totalElement}
               />
-            </Spin>
-
+            </div>
           </div>
         </div>
         <Modal
@@ -683,6 +909,9 @@ class CrudResource extends Component {
                   value={fullname}
                   onChange={this.onChange}
                 />
+                <div style={{ fontSize: 12, color: "red" }}>
+                  {this.state.nameError}
+                </div>
               </div>
             </div>
             <div className="row form-group">
@@ -699,6 +928,9 @@ class CrudResource extends Component {
                   value={email}
                   onChange={this.onChange}
                 />
+                <div style={{ fontSize: 12, color: "red" }}>
+                  {this.state.emailError}
+                </div>
               </div>
             </div>
             <div className="row form-group">
@@ -731,6 +963,9 @@ class CrudResource extends Component {
                   <option></option>
                   {this.showSelectJobtitle()}
                 </select>
+                <div style={{ fontSize: 12, color: "red" }}>
+                  {this.state.jobError}
+                </div>
               </div>
             </div>
             <div className="row form-group">
@@ -747,6 +982,9 @@ class CrudResource extends Component {
                   <option></option>
                   {this.showSelectSkill()}
                 </select>
+                <div style={{ fontSize: 12, color: "red" }}>
+                  {this.state.skillError}
+                </div>
               </div>
             </div>
             <div className="row form-group">
@@ -754,14 +992,15 @@ class CrudResource extends Component {
                 <label htmlFor="exampleInputPassword1" className="fontsize">skill extra</label>
               </div>
               <div className="col-8">
-                <MultiSelectReact
-                  options={this.state.multiSelect}
-                  optionClicked={this.optionClicked.bind(this)}
-                  selectedBadgeClicked={this.selectedBadgeClicked.bind(this)}
-                  selectedOptionsStyles={selectedOptionsStyles}
-                  optionsListStyles={optionsListStyles}
-                  onChange={this.onChange}
-                />
+                <Select
+                  mode="multiple"
+                  style={{ width: '100%' }}
+                  placeholder=""
+                  // defaultValue={['a10', 'c12']}
+                  onChange={this.onChanMultiSkill}
+                >
+                  {this.showSelectEditSkill()}
+                </Select>
               </div>
             </div>
             <div className="row form-group">
